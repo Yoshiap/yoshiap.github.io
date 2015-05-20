@@ -11,10 +11,17 @@
   No.
 </div>
 
+<div id="clock3">
+  JQuery.
+</div>
+
+<script src="jquery.js"></script>
 <script>
 document.getElementById('clock1').innerHTML = (new Date()).toLocaleTimeString();
 document.getElementById('clock2').innerHTML = (new Date()).toLocaleTimeString();
+$("#clock3").text((new Date()).toLocaleTimeString());
 setInterval(function(){document.getElementById('clock2').innerHTML = (new Date()).toLocaleTimeString();},1000);
+setInterval(function(){$("#clock3").text((new Date()).toLocaleTimeString());},1000);
 </script>
 </body>
 </html>
