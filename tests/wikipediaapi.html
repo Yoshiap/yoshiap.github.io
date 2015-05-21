@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<div id="help">
+  PLEASE.
+</div>
+
+<script src="../jquery.js"></script>
+<script>
+$.ajax( {
+    url: "http://en.wikipedia.org/w/api.php?action=query&titles=Main%20Page&format=json",
+    type: 'POST',
+	dataType: 'json'
+	sucess: function(result){$("#help").text(result);}
+	error: function(){$("#help").text("RIP");}
+} );
+</script>
+
+</body>
+</html>
