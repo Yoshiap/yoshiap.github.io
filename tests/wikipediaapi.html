@@ -8,13 +8,17 @@
 
 <script src="../jquery.js"></script>
 <script>
-$.ajax( {
+/*$.ajax( {
     url: "http://en.wikipedia.org/w/api.php?action=query&titles=Main%20Page&format=json",
-    type: 'POST',
-	dataType: 'json'
-	sucess: function(result){$("#help").text(result);}
-	error: function(){$("#help").text("RIP");}
-} );
+    type: 'GET',
+	dataType: 'json',
+	success: function(result){$("#help").text(result);},
+	error: function(err1,err2,err3){$("#help").text("RIP: ".concat(err2));}
+} );*/
+</script>
+<script>
+alert("TEST");
+$.get("http://en.wikipedia.org/w/api.php?action=query&titles=Main%20Page&format=json", function(data,status) {alert("IT WORKED");});
 </script>
 
 </body>
