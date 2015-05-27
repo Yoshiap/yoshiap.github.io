@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<div id="var">
+Random variable here.
+</div>
+
+<input type="text" id="value">
+<br>
+
+<button type="button" onclick="localStorage.setItem('test',$('#value').val()); $('#var').text($('#value').val());">Does something?</button>
+
+<button type="button" onclick="localStorage.removeItem('test'); $('#var').text('var cleared')">Boop</button>
+
+<script src="../jquery.js"></script>
+<script>
+if(typeof(Storage) !== "undefined") {
+    var $val = localStorage.getItem("test");
+	if ($val === null) {
+		$("#var").text("Nothing set yet.");
+	}
+	else {
+		$("#var").text($val);
+	}
+} else {
+    $("#var").text("This page won't do much for you. Sorry");
+}
+</script>
+</body>
+</html>
