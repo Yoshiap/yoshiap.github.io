@@ -6,31 +6,107 @@
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
-    Hello
+    <div>
+        <label for="name-select">Name:</label>
+        <select id="name-select"></select>
+  
+        <label for="diff-select">Difficulty:</label>
+        <select id="diff-select"></select>
+    </div>
     <div>
         <canvas id="chart1"></canvas>
     </div>
     <script>
-        const ctx = document.getElementById('chart1');
-        
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-            labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
-            datasets: [{
-                label: '# of Votes',
-                data: [12, 19, 3, 5, 2, 3],
-                borderWidth: 1
-            }]
-            },
-            options: {
-            scales: {
-                y: {
-                beginAtZero: true
-                }
-            }
-            }
+        let chart;
+        let data;
+  
+        const nameSelect = document.getElementById("name-select");
+        const diffSelect = document.getElementById("diff-select");
+        const ctx = document.getElementById("chart1");
+  
+        fetch("data/diff-history.json")
+          .then(response => response.json())
+          .then(json => {
+            data = json;
+  
+            populateNames();
+            nameSelect.value = Object.keys(data)[0];
+  
+            populateDifficulties();
+            diffSelect.value = Object.keys(data[nameSelect.value])[0];
+  
+            updateChart();
+          });
+  
+        function populateNames() {
+          nameSelect.innerHTML = "";
+  
+          for (const name of Object.keys(data)) {
+            const option = document.createElement("option");
+            option.value = name;
+            option.textContent = name;
+            nameSelect.appendChild(option);
+          }
+        }
+  
+        function populateDifficulties() {
+          diffSelect.innerHTML = "";
+  
+          const name = nameSelect.value;
+  
+          for (const diff of Object.keys(data[name])) {
+            const option = document.createElement("option");
+            option.value = diff;
+            option.textContent = diff;
+            diffSelect.appendChild(option);
+          }
+        }
+  
+        nameSelect.addEventListener("change", () => {
+          populateDifficulties();
+          updateChart();
         });
-    </script>
+  
+        diffSelect.addEventListener("change", () => {
+          updateChart();
+        });
+  
+        // Create/update the chart
+        function updateChart() {
+          const name = nameSelect.value;
+          const diff = diffSelect.value;
+  
+          const history = data[name][diff];
+  
+          const labels = history.map(point => point.time);
+          const values = history.map(point => point.rating);
+  
+          if (chart) {
+            chart.destroy();
+          }
+  
+          chart = new Chart(ctx, {
+            type: "line",
+  
+            data: {
+              labels: labels,
+  
+              datasets: [{
+                label: `${name} - ${diff}`,
+                data: values,
+                borderWidth: 2
+              }]
+            },
+  
+            options: {
+              scales: {
+                y: {
+                  beginAtZero: true
+                }
+              }
+            }
+          });
+        }
+      </script>
   </body>
 </html>
