@@ -27,6 +27,7 @@ jobs:
 
       - name: Commit generated file
         run: |
+          timestamp=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
@@ -37,5 +38,5 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Add data file"
+          git commit -m "Update stats ($timestamp)"
           git push
