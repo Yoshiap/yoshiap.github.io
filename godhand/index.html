@@ -2,109 +2,142 @@
 <html lang="en">
   <head>
     <title>Chart?</title>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/luxon"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1"></script>
+
     <link rel="stylesheet" href="style.css">
   </head>
+
   <body>
     <div>
         <label for="name-select">Name:</label>
         <select id="name-select"></select>
-  
-        <label for="diff-select">Difficulty:</label>
-        <select id="diff-select"></select>
     </div>
+
     <div>
         <canvas id="chart1"></canvas>
     </div>
+
     <script>
+        const difficultyNames = {
+            0: "Kindled",
+            1: "Ascended",
+            2: "Maximum",
+            3: "Immortal"
+        };
+
         let chart;
         let data;
-  
+
         const nameSelect = document.getElementById("name-select");
-        const diffSelect = document.getElementById("diff-select");
         const ctx = document.getElementById("chart1");
-  
+        Chart.defaults.color = "#cccccc";
+
         fetch("data/diff-history.json")
-          .then(response => response.json())
-          .then(json => {
-            data = json;
-  
-            populateNames();
-            nameSelect.value = Object.keys(data)[0];
-  
-            populateDifficulties();
-            diffSelect.value = Object.keys(data[nameSelect.value])[0];
-  
-            updateChart();
-          });
-  
+            .then(response => response.json())
+            .then(json => {
+                data = json;
+
+                populateNames();
+
+                nameSelect.value = Object.keys(data)[0];
+
+                createChart();
+            })
+            .catch(error => {
+                console.error("Failed to load data:", error);
+            });
+
+
         function populateNames() {
-          nameSelect.innerHTML = "";
-  
-          for (const name of Object.keys(data)) {
-            const option = document.createElement("option");
-            option.value = name;
-            option.textContent = name;
-            nameSelect.appendChild(option);
-          }
+            for (const name of Object.keys(data)) {
+                const option = document.createElement("option");
+
+                option.value = name;
+                option.textContent = name;
+
+                nameSelect.appendChild(option);
+            }
         }
-  
-        function populateDifficulties() {
-                diffSelect.innerHTML = "";
-        
-                const name = nameSelect.value;
-        
-                for (const diff of Object.keys(data[name])) {
-                    const option = document.createElement("option");
-                    option.value = diff;
-                    option.textContent = diff;
-                    diffSelect.appendChild(option);
-                }
-                }
-        
-                nameSelect.addEventListener("change", () => {
-                populateDifficulties();
-                updateChart();
-                });
-        
-                diffSelect.addEventListener("change", () => {
-                updateChart();
-                });
-        
-                // Create/update the chart
-                function updateChart() {
+
+
+        function createChart() {
             const name = nameSelect.value;
             const difficulties = data[name];
 
             const datasets = [];
             let maxRating = 0;
+            let latestTime = 0;
 
             for (const diff of Object.keys(difficulties)) {
                 const history = difficulties[diff];
 
                 const points = history.map(point => ({
-                    x: new Date(point.time),
+                    x: point.time,
                     y: point.rating
                 }));
 
                 for (const point of points) {
                     maxRating = Math.max(maxRating, point.y);
+
+                    const time = new Date(point.x).getTime();
+                    latestTime = Math.max(latestTime, time);
                 }
 
                 datasets.push({
-                    label: diff,
+                    label: difficultyNames[diff] ?? diff,
                     data: points,
                     borderWidth: 2,
                     tension: 0.2
                 });
             }
 
-            chart.data.datasets = datasets;
-            chart.options.scales.y.max = Math.max(16000, maxRating);
-            chart.update();
+
+            // Show the most recent 24 hours
+            const oneDay = 24 * 60 * 60 * 1000;
+            const earliestTime = latestTime - oneDay;
+
+
+            if (chart) {
+                chart.destroy();
+            }
+
+
+            chart = new Chart(ctx, {
+                type: "line",
+
+                data: {
+                    datasets: datasets
+                },
+
+                options: {
+                    scales: {
+                        x: {
+                            type: "time",
+
+                            min: earliestTime,
+                            max: latestTime,
+
+                            time: {
+                                tooltipFormat: "MMM d, yyyy h:mm a"
+                            }
+                        },
+
+                        y: {
+                            beginAtZero: true,
+                            max: Math.max(16000, maxRating)
+                        }
+                    }
+                }
+            });
         }
-      </script>
+
+
+        nameSelect.addEventListener("change", () => {
+            createChart();
+        });
+    </script>
   </body>
 </html>
