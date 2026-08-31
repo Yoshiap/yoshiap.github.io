@@ -26,6 +26,6 @@ if response.status_code == 200:
       data[name][diff] = []
     data[name][diff].append({"time": timestamp, "rating": rating})
   with open(path, "w") as f:
-    json.dump(data, f, indent=2)
+    json.dump(data, f)
 
   
