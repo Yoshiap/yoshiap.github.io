@@ -3,6 +3,8 @@
   <head>
     <title>Chart?</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon"></script>
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
@@ -50,62 +52,58 @@
         }
   
         function populateDifficulties() {
-          diffSelect.innerHTML = "";
-  
-          const name = nameSelect.value;
-  
-          for (const diff of Object.keys(data[name])) {
-            const option = document.createElement("option");
-            option.value = diff;
-            option.textContent = diff;
-            diffSelect.appendChild(option);
-          }
-        }
-  
-        nameSelect.addEventListener("change", () => {
-          populateDifficulties();
-          updateChart();
-        });
-  
-        diffSelect.addEventListener("change", () => {
-          updateChart();
-        });
-  
-        // Create/update the chart
-        function updateChart() {
-          const name = nameSelect.value;
-          const diff = diffSelect.value;
-  
-          const history = data[name][diff];
-  
-          const labels = history.map(point => point.time);
-          const values = history.map(point => point.rating);
-  
-          if (chart) {
-            chart.destroy();
-          }
-  
-          chart = new Chart(ctx, {
-            type: "line",
-  
-            data: {
-              labels: labels,
-  
-              datasets: [{
-                label: `${name} - ${diff}`,
-                data: values,
-                borderWidth: 2
-              }]
-            },
-  
-            options: {
-              scales: {
-                y: {
-                  beginAtZero: true
+                diffSelect.innerHTML = "";
+        
+                const name = nameSelect.value;
+        
+                for (const diff of Object.keys(data[name])) {
+                    const option = document.createElement("option");
+                    option.value = diff;
+                    option.textContent = diff;
+                    diffSelect.appendChild(option);
                 }
-              }
+                }
+        
+                nameSelect.addEventListener("change", () => {
+                populateDifficulties();
+                updateChart();
+                });
+        
+                diffSelect.addEventListener("change", () => {
+                updateChart();
+                });
+        
+                // Create/update the chart
+                function updateChart() {
+            const name = nameSelect.value;
+            const difficulties = data[name];
+
+            const datasets = [];
+            let maxRating = 0;
+
+            for (const diff of Object.keys(difficulties)) {
+                const history = difficulties[diff];
+
+                const points = history.map(point => ({
+                    x: new Date(point.time),
+                    y: point.rating
+                }));
+
+                for (const point of points) {
+                    maxRating = Math.max(maxRating, point.y);
+                }
+
+                datasets.push({
+                    label: diff,
+                    data: points,
+                    borderWidth: 2,
+                    tension: 0.2
+                });
             }
-          });
+
+            chart.data.datasets = datasets;
+            chart.options.scales.y.max = Math.max(16000, maxRating);
+            chart.update();
         }
       </script>
   </body>
