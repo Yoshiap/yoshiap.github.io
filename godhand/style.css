@@ -2,5 +2,10 @@ body {
     background-color: #111111;
     color: #ffffff;
     font-family: sans-serif;
-    margin: 40px;
+    margin: 20px;
+}
+
+#split-charts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
 }
