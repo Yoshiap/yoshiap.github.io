@@ -8,14 +8,4 @@ body {
 #split-charts {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    width: 100%;
-}
-
-#split-charts > div {
-    min-width: 0;
-    width: 100%;
-}
-
-#split-charts canvas {
-    max-width: 100%;
 }
