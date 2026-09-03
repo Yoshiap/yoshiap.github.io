@@ -2,11 +2,9 @@
 <html lang="en">
   <head>
     <title>Chart?</title>
-
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@3"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1"></script>
-
     <link rel="stylesheet" href="style.css">
   </head>
 
@@ -14,328 +12,296 @@
     <h2 style="text-align: center;">Godhand Chart Ratings</h2>
 
     <div>
-        <label for="name-select">Name:</label>
-        <select id="name-select"></select>
+      <label for="name-select">Name:</label>
+      <select id="name-select"></select>
 
-        <label for="display-mode">Display Mode:</label>
-        <select id="display-mode">
-            <option value="Combined">Combined</option>
-            <option value="Split">Split</option>
-        </select>
+      <label for="display-mode">Display Mode:</label>
+      <select id="display-mode">
+        <option value="Combined">Combined</option>
+        <option value="Split">Split</option>
+      </select>
     </div>
 
     <!-- Combined chart -->
     <div id="combined-chart">
-        <canvas id="chart1"></canvas>
+      <canvas id="chart1"></canvas>
     </div>
 
     <!-- Split charts -->
     <div id="split-charts">
-        <div>
-            <canvas id="chart-kindled"></canvas>
-        </div>
-
-        <div>
-            <canvas id="chart-ascended"></canvas>
-        </div>
-
-        <div>
-            <canvas id="chart-maximum"></canvas>
-        </div>
-
-        <div>
-            <canvas id="chart-immortal"></canvas>
-        </div>
+      <div>
+        <canvas id="chart-kindled"></canvas>
+      </div>
+      <div>
+        <canvas id="chart-ascended"></canvas>
+      </div>
+      <div>
+        <canvas id="chart-maximum"></canvas>
+      </div>
+      <div>
+        <canvas id="chart-immortal"></canvas>
+      </div>
     </div>
 
     <script>
-        // Difficulty display names
-        const difficultyNames = {
-            0: "Kindled",
-            1: "Ascended",
-            2: "Maximum",
-            3: "Immortal"
-        };
+      const difficultyNames = {
+        0: "Kindled",
+        1: "Ascended",
+        2: "Maximum",
+        3: "Immortal"
+      };
 
-        // Difficulty colors
-        const difficultyColors = {
-            0: "#36A2EB",
-            1: "#FF6384",
-            2: "#FFCE56",
-            3: "#4BC0C0"
-        };
+      const difficultyColors = {
+        0: "#36A2EB",
+        1: "#FF6384",
+        2: "#FFCE56",
+        3: "#4BC0C0"
+      };
 
-        Chart.defaults.color = "#cccccc";
+      Chart.defaults.color = "#cccccc";
 
-        let data;
-        let chart;
-        let splitChartInstances = [];
+      let data;
+      let chart;
+      let splitChartInstances = [];
 
-        const nameSelect = document.getElementById("name-select");
-        const displayMode = document.getElementById("display-mode");
+      const nameSelect = document.getElementById("name-select");
+      const displayMode = document.getElementById("display-mode");
+      const combinedChart = document.getElementById("combined-chart");
+      const splitCharts = document.getElementById("split-charts");
+      const ctx = document.getElementById("chart1");
 
-        const combinedChart = document.getElementById("combined-chart");
-        const splitCharts = document.getElementById("split-charts");
+      const splitCanvases = [
+        document.getElementById("chart-kindled"),
+        document.getElementById("chart-ascended"),
+        document.getElementById("chart-maximum"),
+        document.getElementById("chart-immortal")
+      ];
 
-        const ctx = document.getElementById("chart1");
+      splitCharts.style.display = "none";
 
-        const splitCanvases = [
-            document.getElementById("chart-kindled"),
-            document.getElementById("chart-ascended"),
-            document.getElementById("chart-maximum"),
-            document.getElementById("chart-immortal")
-        ];
+      fetch("data/diff-history.json")
+        .then(response => response.json())
+        .then(json => {
+          data = json;
+          populateNames();
+          nameSelect.value = Object.keys(data)[0];
+          createChart();
+        })
+        .catch(error => {
+          console.error("Failed to load data:", error);
+        });
 
-        // Hide split charts initially
+      function populateNames() {
+        nameSelect.innerHTML = "";
+
+        for (const name of Object.keys(data)) {
+          const option = document.createElement("option");
+          option.value = name;
+          option.textContent = name;
+          nameSelect.appendChild(option);
+        }
+      }
+
+      function createChart() {
+        if (displayMode.value === "Combined") {
+          createCombinedChart();
+        } else {
+          createSplitCharts();
+        }
+      }
+
+      function createCombinedChart() {
+        combinedChart.style.display = "block";
         splitCharts.style.display = "none";
 
+        if (chart) {
+          chart.destroy();
+          chart = null;
+        }
 
-        // Load data
-        fetch("data/diff-history.json")
-            .then(response => response.json())
-            .then(json => {
-                data = json;
+        for (const splitChart of splitChartInstances) {
+          splitChart.destroy();
+        }
+        splitChartInstances = [];
 
-                populateNames();
+        const name = nameSelect.value;
+        const difficulties = data[name];
+        const datasets = [];
 
-                nameSelect.value = Object.keys(data)[0];
+        let maxRating = 0;
+        let latestTime = 0;
 
-                createChart();
-            })
-            .catch(error => {
-                console.error("Failed to load data:", error);
+        for (const diff of Object.keys(difficulties)) {
+          const history = difficulties[diff];
+
+          const points = history.map(point => ({
+            x: point.time,
+            y: point.rating
+          }));
+
+          if (points.length > 0) {
+            points.push({
+              x: Date.now(),
+              y: points[points.length - 1].y
             });
+          }
 
+          for (const point of points) {
+            maxRating = Math.max(maxRating, point.y);
 
-        // Populate name dropdown
-        function populateNames() {
-            nameSelect.innerHTML = "";
+            const time = new Date(point.x).getTime();
+            latestTime = Math.max(latestTime, time);
+          }
 
-            for (const name of Object.keys(data)) {
-                const option = document.createElement("option");
-
-                option.value = name;
-                option.textContent = name;
-
-                nameSelect.appendChild(option);
+          datasets.push({
+            label: difficultyNames[diff] ?? diff,
+            data: points,
+            borderWidth: 2,
+            stepped: true,
+            borderColor: difficultyColors[diff],
+            pointRadius: context => {
+              return context.dataIndex === points.length - 1 ? 0 : 3;
+            },
+            pointHoverRadius: context => {
+              return context.dataIndex === points.length - 1 ? 0 : 3;
             }
+          });
         }
 
+        const oneDay = 24 * 60 * 60 * 1000;
+        const earliestTime = latestTime - oneDay;
 
-        // Decide which type of chart to display
-        function createChart() {
-            if (displayMode.value === "Combined") {
-                createCombinedChart();
-            } else {
-                createSplitCharts();
-            }
-        }
-
-
-        // Create the combined chart
-        function createCombinedChart() {
-            combinedChart.style.display = "block";
-            splitCharts.style.display = "none";
-
-            // Destroy any existing combined chart
-            if (chart) {
-                chart.destroy();
-                chart = null;
-            }
-
-            // Destroy any existing split charts
-            for (const splitChart of splitChartInstances) {
-                splitChart.destroy();
-            }
-
-            splitChartInstances = [];
-
-
-            const name = nameSelect.value;
-            const difficulties = data[name];
-
-            const datasets = [];
-
-            let maxRating = 0;
-            let latestTime = 0;
-
-
-            // Build one dataset per difficulty
-            for (const diff of Object.keys(difficulties)) {
-                const history = difficulties[diff];
-
-                const points = history.map(point => ({
-                    x: point.time,
-                    y: point.rating
-                }));
-
-                for (const point of points) {
-                    maxRating = Math.max(maxRating, point.y);
-
-                    const time = new Date(point.x).getTime();
-                    latestTime = Math.max(latestTime, time);
+        chart = new Chart(ctx, {
+          type: "line",
+          data: {
+            datasets: datasets
+          },
+          options: {
+            scales: {
+              x: {
+                type: "time",
+                min: earliestTime,
+                max: latestTime,
+                time: {
+                  tooltipFormat: "MMM d, yyyy h:mm a"
                 }
-
-                datasets.push({
-                    label: difficultyNames[diff] ?? diff,
-                    data: points,
-                    borderWidth: 2,
-                    stepped: true,
-                    borderColor: difficultyColors[diff]
-                });
+              },
+              y: {
+                beginAtZero: true,
+                max: Math.max(16000, maxRating)
+              }
             }
+          }
+        });
+      }
 
+      function createSplitCharts() {
+        combinedChart.style.display = "none";
+        splitCharts.style.display = "grid";
 
-            // Show the most recent 24 hours
-            const oneDay = 24 * 60 * 60 * 1000;
-            const earliestTime = latestTime - oneDay;
+        if (chart) {
+          chart.destroy();
+          chart = null;
+        }
 
+        for (const splitChart of splitChartInstances) {
+          splitChart.destroy();
+        }
+        splitChartInstances = [];
 
-            chart = new Chart(ctx, {
-                type: "line",
+        const name = nameSelect.value;
+        const difficulties = data[name];
 
-                data: {
-                    datasets: datasets
+        let latestTime = 0;
+
+        for (const diff of Object.keys(difficulties)) {
+          for (const point of difficulties[diff]) {
+            const time = new Date(point.time).getTime();
+            latestTime = Math.max(latestTime, time);
+          }
+        }
+
+        // Extend the x-axis to the current time.
+        latestTime = Date.now();
+
+        const oneDay = 24 * 60 * 60 * 1000;
+        const earliestTime = latestTime - oneDay;
+
+        for (let diff = 0; diff < 4; diff++) {
+          if (!difficulties[diff]) {
+            continue;
+          }
+
+          const history = difficulties[diff];
+
+          const points = history.map(point => ({
+            x: point.time,
+            y: point.rating
+          }));
+
+          if (points.length > 0) {
+            points.push({
+              x: Date.now(),
+              y: points[points.length - 1].y
+            });
+          }
+
+          let maxRating = 0;
+          let minRating = Infinity;
+
+          for (const point of points) {
+            maxRating = Math.max(maxRating, point.y);
+            minRating = Math.min(minRating, point.y);
+          }
+
+          const midRating = (maxRating + minRating) / 2;
+
+          const newChart = new Chart(splitCanvases[diff], {
+            type: "line",
+            data: {
+              datasets: [{
+                label: difficultyNames[diff] ?? diff,
+                data: points,
+                borderWidth: 2,
+                stepped: true,
+                borderColor: difficultyColors[diff],
+                pointRadius: context => {
+                  return context.dataIndex === points.length - 1 ? 0 : 3;
                 },
-
-                options: {
-                    scales: {
-                        x: {
-                            type: "time",
-
-                            min: earliestTime,
-                            max: latestTime,
-
-                            time: {
-                                tooltipFormat: "MMM d, yyyy h:mm a"
-                            }
-                        },
-
-                        y: {
-                            beginAtZero: true,
-                            max: Math.max(16000, maxRating)
-                        }
-                    }
+                pointHoverRadius: context => {
+                  return context.dataIndex === points.length - 1 ? 0 : 3;
                 }
-            });
+              }]
+            },
+            options: {
+              scales: {
+                x: {
+                  type: "time",
+                  min: earliestTime,
+                  max: latestTime,
+                  time: {
+                    tooltipFormat: "MMM d, yyyy h:mm a"
+                  }
+                },
+                y: {
+                  suggestedMin: midRating - 25,
+                  suggestedMax: midRating + 25
+                }
+              }
+            }
+          });
+
+          splitChartInstances.push(newChart);
         }
+      }
 
+      nameSelect.addEventListener("change", () => {
+        createChart();
+      });
 
-        // Create the four split charts
-        function createSplitCharts() {
-            combinedChart.style.display = "none";
-            splitCharts.style.display = "grid";
-
-            // Destroy existing combined chart
-            if (chart) {
-                chart.destroy();
-                chart = null;
-            }
-
-            // Destroy existing split charts
-            for (const splitChart of splitChartInstances) {
-                splitChart.destroy();
-            }
-
-            splitChartInstances = [];
-
-
-            const name = nameSelect.value;
-            const difficulties = data[name];
-
-            let latestTime = 0;
-
-
-            // Find the latest timestamp across ALL difficulties
-            for (const diff of Object.keys(difficulties)) {
-                for (const point of difficulties[diff]) {
-                    const time = new Date(point.time).getTime();
-
-                    latestTime = Math.max(latestTime, time);
-                }
-            }
-
-
-            // Show the most recent 24 hours
-            const oneDay = 24 * 60 * 60 * 1000;
-            const earliestTime = latestTime - oneDay;
-
-
-            // Create one chart for each difficulty
-            for (let diff = 0; diff < 4; diff++) {
-
-                // Skip missing difficulties
-                if (!difficulties[diff]) {
-                    continue;
-                }
-
-                const history = difficulties[diff];
-
-                const points = history.map(point => ({
-                    x: point.time,
-                    y: point.rating
-                }));
-
-                let maxRating = 0;
-                let minRating = Infinity;
-
-                for (const point of points) {
-                    maxRating = Math.max(maxRating, point.y);
-                    minRating = Math.min(minRating, point.y);
-                }
-
-                const midRating = (maxRating + minRating) / 2;
-
-
-                const newChart = new Chart(splitCanvases[diff], {
-                    type: "line",
-
-                    data: {
-                        datasets: [{
-                            label: difficultyNames[diff] ?? diff,
-                            data: points,
-                            borderWidth: 2,
-                            stepped: true,
-                            borderColor: difficultyColors[diff]
-                        }]
-                    },
-
-                    options: {
-                        scales: {
-                            x: {
-                                type: "time",
-
-                                min: earliestTime,
-                                max: latestTime,
-
-                                time: {
-                                    tooltipFormat: "MMM d, yyyy h:mm a"
-                                }
-                            },
-
-                            y: {
-                                suggestedMin: midRating - 25,
-                                suggestedMax: midRating + 25
-                            }
-                        }
-                    }
-                });
-
-                splitChartInstances.push(newChart);
-            }
-        }
-
-
-        // Changing the name updates the chart
-        nameSelect.addEventListener("change", () => {
-            createChart();
-        });
-
-
-        // Changing the display mode switches between layouts
-        displayMode.addEventListener("change", () => {
-            createChart();
-        });
+      displayMode.addEventListener("change", () => {
+        createChart();
+      });
     </script>
   </body>
 </html>
