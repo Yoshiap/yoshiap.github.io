@@ -24,7 +24,13 @@ if response.status_code == 200:
       data[name] = {}
     if diff not in data[name]:
       data[name][diff] = []
-    data[name][diff].append({"time": timestamp, "rating": rating})
+    history = data[name][diff]
+    # Only add a new point if the rating changed
+    if not history or history[-1]["rating"] != rating:
+        history.append({
+            "time": timestamp,
+            "rating": rating
+        })
   with open(path, "w") as f:
     json.dump(data, f)
 

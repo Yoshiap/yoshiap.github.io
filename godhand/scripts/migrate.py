@@ -1,43 +1,30 @@
 import json
-import glob
-from datetime import datetime
 
-data_path = "godhand/data"
-output_path = "godhand/data/diff-history.json"
+path = "godhand/data/diff-history.json"
 
-data = {}
+with open(path, "r") as f:
+    data = json.load(f)
 
-for path in sorted(glob.glob(f"{data_path}/godhand_stats_*.txt")):
-    filename = path.split("/")[-1]
+removed = 0
 
-    # godhand_stats_20260830-193017.txt
-    timestamp_str = filename.removeprefix("godhand_stats_").removesuffix(".txt")
+for name in data:
+    for diff in data[name]:
+        history = data[name][diff]
 
-    # Convert filename timestamp to ISO 8601 UTC
-    timestamp = datetime.strptime(
-        timestamp_str,
-        "%Y%m%d-%H%M%S"
-    ).isoformat() + "Z"
+        if not history:
+            continue
 
-    print(f"Processing {filename} -> {timestamp}")
+        new_history = [history[0]]
 
-    with open(path, "r") as f:
-        for line in f:
-            name, diff, rating = line.strip().split(",")
-            rating = int(rating)
+        for point in history[1:]:
+            if point["rating"] != new_history[-1]["rating"]:
+                new_history.append(point)
+            else:
+                removed += 1
 
-            if name not in data:
-                data[name] = {}
+        data[name][diff] = new_history
 
-            if diff not in data[name]:
-                data[name][diff] = []
-
-            data[name][diff].append({
-                "time": timestamp,
-                "rating": rating
-            })
-
-with open(output_path, "w") as f:
+with open(path, "w") as f:
     json.dump(data, f, indent=2)
 
-print(f"Migrated {len(glob.glob(f'{data_path}/godhand_stats_*.txt'))} files.")
+print(f"Removed {removed} redundant data points.")
