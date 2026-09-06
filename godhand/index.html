@@ -151,7 +151,7 @@
 
         for (const diff of Object.keys(difficulties)) {
           const history = difficulties[diff];
-          while (history.length > 1 && history[1].time < earliestTime) history.shift()
+          while (history.length > 1 && new Date(history[1].time).getTime() < earliestTime) history.shift()
 
           const points = history.map(point => ({
             x: point.time,
@@ -242,7 +242,7 @@
           }
 
           const history = difficulties[diff];
-          while (history.length > 1 && history[1].time < earliestTime) history.shift()
+          while (history.length > 1 && new Date(history[1].time).getTime() < earliestTime) history.shift()
 
           const points = history.map(point => ({
             x: point.time,
