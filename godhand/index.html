@@ -133,6 +133,25 @@
 
         for (const diff of Object.keys(difficulties)) {
           const history = difficulties[diff];
+          const points = history.map(point => ({
+            x: point.time,
+            y: point.rating
+          }));
+
+          for (const point of points) {
+            maxRating = Math.max(maxRating, point.y);
+
+            const time = new Date(point.x).getTime();
+            latestTime = Math.max(latestTime, time);
+          }
+        }
+
+        const oneDay = 24 * 60 * 60 * 1000;
+        const earliestTime = latestTime - oneDay;
+
+        for (const diff of Object.keys(difficulties)) {
+          const history = difficulties[diff];
+          while (history.length > 1 && history[1].time < earliestTime) history.shift()
 
           const points = history.map(point => ({
             x: point.time,
@@ -144,13 +163,6 @@
               x: Date.now(),
               y: points[points.length - 1].y
             });
-          }
-
-          for (const point of points) {
-            maxRating = Math.max(maxRating, point.y);
-
-            const time = new Date(point.x).getTime();
-            latestTime = Math.max(latestTime, time);
           }
 
           datasets.push({
@@ -167,9 +179,6 @@
             }
           });
         }
-
-        const oneDay = 24 * 60 * 60 * 1000;
-        const earliestTime = latestTime - oneDay;
 
         chart = new Chart(ctx, {
           type: "line",
@@ -233,6 +242,7 @@
           }
 
           const history = difficulties[diff];
+          while (history.length > 1 && history[1].time < earliestTime) history.shift()
 
           const points = history.map(point => ({
             x: point.time,
